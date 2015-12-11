@@ -1,0 +1,13 @@
+#!/bin/bash
+
+LIST=`ls | grep .pcap | grep 4102`
+
+#LIST=`ls | grep .pcap | grep 4090`
+
+
+for A in $LIST ; do 
+    echo file $A
+    ./run $A
+    echo output from file  $A
+    read -p "Press any key to continue"
+done
