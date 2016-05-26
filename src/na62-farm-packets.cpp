@@ -8,7 +8,7 @@
 #include <socket/EthernetUtils.h>
 #include <l0/MEP.h>
 #include <l0/MEPFragment.h>
-#include <LKr/LkrFragment.h>
+//#include <LKr/LkrFragment.h>
 #include <eventBuilding/SourceIDManager.h>
 
 #include <exceptions/UnknownCREAMSourceIDFound.h>
@@ -16,6 +16,12 @@
 
 #include "options/MyOptions.h"
 #include "socket/FragmentStore.h"
+
+
+
+#include <eventBuilding/Event.h>
+#include "storage/EventSerializer.h"
+#include "structs/Event.h"
 
 using namespace std;
 using namespace na62;
@@ -71,11 +77,12 @@ int main(int argc, char *argv[]) {
 //get file
 char *filename = argv[1];
 
+/*
 int length = sizeof(argv[1])/sizeof(char);
 //cout<<"Lenght:"<<length<<endl;
 char * Cfilename = new char[length];
 Cfilename = argv[1];
-
+*/
 
 
 //error buffer
@@ -92,11 +99,21 @@ struct pcap_pkthdr *header;
 
 
  MyOptions::Load(argc, argv);
- SourceIDManager::Initialize(Options::GetInt(OPTION_TS_SOURCEID),
+
+ /*SourceIDManager::Initialize(Options::GetInt(OPTION_TS_SOURCEID),
  			Options::GetIntPairList(OPTION_DATA_SOURCE_IDS),
  			Options::GetIntPairList(OPTION_CREAM_CRATES),
  			Options::GetIntPairList(OPTION_INACTIVE_CREAM_CRATES),
- 			Options::GetInt(OPTION_MUV_CREAM_CRATE_ID));
+ 			Options::GetInt(OPTION_MUV_CREAM_CRATE_ID));*/
+
+
+ SourceIDManager::Initialize(Options::GetInt(OPTION_TS_SOURCEID),
+ 			Options::GetIntPairList(OPTION_DATA_SOURCE_IDS),
+ 			Options::GetIntPairList(OPTION_L1_DATA_SOURCE_IDS));
+
+ // OPTION_L1_DATA_SOURCE_IDS
+
+
 
 
 
@@ -119,11 +136,15 @@ struct pcap_pkthdr *header;
  uint_fast16_t destPort = 0;
  //uint_fast32_t MyIP = 622117386;//10.194.20.37
 
- //for 4090*
+ //for 4090
  uint_fast32_t MyIP = 638894602;
  //622117386
 
  cout<<"Packets destination: "<<EthernetUtils::ipToString(MyIP)<<endl;
+
+ na62::Event * test = new Event(1);
+
+
 
 int count_source_id = 0;
  while (pcap_next_ex(handler, &header, &packet) >= 0){
@@ -141,20 +162,20 @@ int count_source_id = 0;
 	//Copied from HandleFrameTask
 	/////////////
 		UDP_HDR* hdr = (UDP_HDR*) container.data;
-		const uint_fast16_t etherType = /*ntohs*/(hdr->eth.ether_type);
+		const uint_fast16_t etherType = (hdr->eth.ether_type);//ntohs
 		const uint_fast8_t ipProto = hdr->ip.protocol;
 		destPort = ntohs(hdr->udp.dest);
 		const uint_fast32_t dstIP = hdr->ip.daddr;
 
-		if (etherType != 0x0008/*ETHERTYPE_IP*/|| ipProto != IPPROTO_UDP) {
+		if (etherType != 0x0008 || ipProto != IPPROTO_UDP) {//ETHERTYPE_IP
 			arp++;
 			//cout<< "Arp " << EthernetUtils::ipToString(hdr->ip.saddr) << endl;
 			continue;
 		}
 
-		/*
-		 * Check checksum errors
-		 */
+		//
+		 // Check checksum errors
+		 //
 		if (!checkFrame(hdr, container.length)) {
 			cout<<"Packets number:"<<npackets<<" Fail check frame"<<endl;
 			failcheckframe++;
@@ -162,10 +183,10 @@ int count_source_id = 0;
 			continue;
 		}
 
-		/*
-		 * Check if we are really the destination of the IP datagram
-		 */
-		 //for 4102*
+		//
+		 // Check if we are really the destination of the IP datagram
+		 //
+		 //for 4102
 
 		 if (MyIP != dstIP){
 			cout<<"Packets number:"<<npackets<<" Wrong ip"<<endl;
@@ -230,16 +251,24 @@ int count_source_id = 0;
             uint_fast8_t source = 28;
             uint_fast8_t sub = 3;
             if ( fragment->getEventNumber() ==  139899){
+            	LOG_INFO("Match Event");
+
 
 				if ( fragment->getSourceID() == source) {
-					//if (fragment->getSourceSubID() == sub) {
+	            	LOG_INFO("Match Rich");
+					//if (fragment->getSourceSubID() == sub) {}
 					count_source_id++;
 					cout<<"Souce id: "<<((int)fragment->getSourceID())
 							<<" SubId: "<<((int)fragment->getSourceSubID())
 							<<" time: "<<count_source_id
 							<<" Event number: "<< fragment->getEventNumber()
-							<<ENDL;
-					//}
+							<<endl;
+
+					if (test->addL0Fragment(fragment, 1)) {
+						LOG_INFO("Success");
+					}else{
+						LOG_INFO("ERROR");
+					}
 				}
             }
 		}
@@ -252,17 +281,27 @@ int count_source_id = 0;
 	}
  }
 
-cout<<endl<<"###Filename: "<<Cfilename<<endl;
-cout<<"Global Statistics: "<<endl;
-cout<<" Packets destination: "<<EthernetUtils::ipToString(MyIP)<<"IP: "<<MyIP<<endl;
-cout<<" Number of packets: "<<npackets<<endl;
-cout<<" Number of Arp: "<<arp<<endl;
-cout<<" Number of fail check frame: "<< failcheckframe<<endl;
-cout<<" Number of wrong destination ip: "<< wrongdestip<<endl;
-cout<<" Number of wrong destination port: "<<  wrongdestport<<endl;
-cout<<" Nfragment / Reassembled Frames / Unfinished Frames : "<<FragmentStore::getNumberOfReceivedFragments()<<"/"<<FragmentStore::getNumberOfReassembledFrames()<<"/"<<FragmentStore::getNumberOfUnfinishedFrames()<<endl;
-cout<<" Range Event Number: ["<<eventnumberMIN<<" - "<<eventnumberMAX<<"]"<<endl;
-cout<<" Range Mep Factor: ["<<mepfactorMIN<<" - "<<mepfactorMAX<<"]"<<endl;
 
+	cout<<endl<<"###Filename: "<<filename<<endl;
+	cout<<"Global Statistics: "<<endl;
+	cout<<" Packets destination: "<<EthernetUtils::ipToString(MyIP)<<"IP: "<<MyIP<<endl;
+	cout<<" Number of packets: "<<npackets<<endl;
+	cout<<" Number of Arp: "<<arp<<endl;
+	cout<<" Number of fail check frame: "<< failcheckframe<<endl;
+	cout<<" Number of wrong destination ip: "<< wrongdestip<<endl;
+	cout<<" Number of wrong destination port: "<<  wrongdestport<<endl;
+	cout<<" Nfragment / Reassembled Frames / Unfinished Frames : "<<FragmentStore::getNumberOfReceivedFragments()<<"/"<<FragmentStore::getNumberOfReassembledFrames()<<"/"<<FragmentStore::getNumberOfUnfinishedFrames()<<endl;
+	cout<<" Range Event Number: ["<<eventnumberMIN<<" - "<<eventnumberMAX<<"]"<<endl;
+	cout<<" Range Mep Factor: ["<<mepfactorMIN<<" - "<<mepfactorMAX<<"]"<<endl;
+
+
+
+/*na62::EVENT_HDR* output = na62::EventSerializer::SerializeEvent(test);
+	//na62::EventSerializer::SerializeEvent(test);
+	char * serial;
+	serial = (char*) output;
+	for (int i =0; i < 8; ++i) {
+		cout << *(serial + i)<<endl;
+	}*/
 	return 0;
 }

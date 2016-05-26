@@ -155,10 +155,10 @@ private:
 
 			if (currentData->getFragmentOffsetInBytes() + sizeof(ether_header)
 					+ sizeof(iphdr) != currentOffset) {
-				LOG_ERROR
-						<< "Error while reassembling IP fragments: sum of fragment lengths is "
+				LOG_ERROR(
+						"Error while reassembling IP fragments: sum of fragment lengths is "
 						<< currentOffset << " but offset of current frame is "
-						<< currentData->getFragmentOffsetInBytes() << ENDL;
+						<< currentData->getFragmentOffsetInBytes() );
 
 				for (DataContainer& fragment : fragments) {
 					if (fragment.data != nullptr) {
