@@ -18,7 +18,7 @@
 #include "socket/FragmentStore.h"
 
 
-
+#include "eventBuilding/SourceIDManager.h"
 #include <eventBuilding/Event.h>
 #include "storage/EventSerializer.h"
 #include "structs/Event.h"
@@ -146,6 +146,16 @@ struct pcap_pkthdr *header;
 
 
 
+ //Detector counter
+ uint c_lav = 0;
+ uint c_cedar = 0;
+ uint c_chanti = 0;
+ uint c_rich = 0;
+ uint c_chod = 0;
+ uint c_irc = 0;
+
+
+
 int count_source_id = 0;
  while (pcap_next_ex(handler, &header, &packet) >= 0){
 	++npackets;
@@ -248,28 +258,77 @@ int count_source_id = 0;
 					eventnumberMAX = eventnumberTEMP;
 			}
 			///Get the number of the detector
-            uint_fast8_t source = 28;
+            uint_fast8_t source = fragment->getSourceID();
             uint_fast8_t sub = 3;
-            if ( fragment->getEventNumber() ==  139899){
+            //LOG_INFO(fragment->getEventNumber());
+            //Good Event number
+            //
+            //215284
+            //215285
+            //215286
+            //215287
+            //215280
+            //215281
+            //215282
+            //215283
+            //215284
+            //215285
+            //215286
+
+            //if ( fragment->getEventNumber() ==  139899){
+            if ( fragment->getEventNumber() ==  215283){
             	LOG_INFO("Match Event");
 
+            	if (source == 0x4) {
+            		//LOG_INFO("Match Cedar");
 
-				if ( fragment->getSourceID() == source) {
-	            	LOG_INFO("Match Rich");
-					//if (fragment->getSourceSubID() == sub) {}
+
+            		 c_cedar++;
+
+            	} else if (source == 0x10) {
+            		//LOG_INFO("Match lav");
+            		 c_lav++;
+            	} else if (source == 0xc) {
+            		//LOG_INFO("Match Chanti");
+            		 c_chanti++;
+            	} else if (source == 0x18) {
+            		//LOG_INFO("Match Rich");
+            		 c_rich++;
+            	} else if (source == 0x1c) {
+            	   // LOG_INFO("Match Chod");
+            	    c_chod++;
+            	}else if (source  == 0x20) {
+            		//LOG_INFO("Match IRC");
+            	    c_irc++;
+
+            	}else if (source  == 0x28) {
+	            	//LOG_INFO("Match MUV1");
+
+            	}else if (source  == 0x30) {
+	            	//LOG_INFO("Match MUV3");
+
+            	}else if (source  == 0x40) {
+	            	//LOG_INFO("Match L0tp");
+
+            	}else{
+					LOG_INFO("Source ID: "<<fragment->getSourceID());
 					count_source_id++;
-					cout<<"Souce id: "<<((int)fragment->getSourceID())
-							<<" SubId: "<<((int)fragment->getSourceSubID())
-							<<" time: "<<count_source_id
-							<<" Event number: "<< fragment->getEventNumber()
-							<<endl;
+						cout<<"Souce id: "<<((int)fragment->getSourceID())
+								<<" SubId: "<<((int)fragment->getSourceSubID())
+								<<" time: "<<count_source_id
+								<<" Event number: "<< fragment->getEventNumber()
+								<<endl;
+				}
+
+
 
 					if (test->addL0Fragment(fragment, 1)) {
-						LOG_INFO("Success");
+						LOG_INFO("Complete! Serializing");
+						const EVENT_HDR* data = EventSerializer::SerializeEvent(test);
 					}else{
-						LOG_INFO("ERROR");
+						//LOG_INFO("not Complete");
 					}
-				}
+
             }
 		}
 	} catch (UnknownSourceIDFound const& e) {
@@ -294,8 +353,13 @@ int count_source_id = 0;
 	cout<<" Range Event Number: ["<<eventnumberMIN<<" - "<<eventnumberMAX<<"]"<<endl;
 	cout<<" Range Mep Factor: ["<<mepfactorMIN<<" - "<<mepfactorMAX<<"]"<<endl;
 
-
-
+	LOG_INFO("Cedar fragments: " << c_cedar);
+	LOG_INFO("Chanti fragments: " << c_chanti);
+	LOG_INFO("Lav fragments: " << c_lav );
+	LOG_INFO("Rich fragments: " << c_rich);
+	LOG_INFO("Chod fragments: " << c_chod);
+	LOG_INFO("Irc fragments: " << c_irc);
+	LOG_INFO("Expected packets: " << SourceIDManager::NUMBER_OF_EXPECTED_L0_PACKETS_PER_EVENT);
 /*na62::EVENT_HDR* output = na62::EventSerializer::SerializeEvent(test);
 	//na62::EventSerializer::SerializeEvent(test);
 	char * serial;
