@@ -154,7 +154,8 @@ struct pcap_pkthdr *header;
  uint c_chod = 0;
  uint c_irc = 0;
 
-
+vector<DataContainer> packets;
+char * new_packet = nullptr;
 
 int count_source_id = 0;
  while (pcap_next_ex(handler, &header, &packet) >= 0){
@@ -193,6 +194,13 @@ int count_source_id = 0;
 			continue;
 		}
 
+		//Storing reconstructed packets in the heap
+		new_packet = nullptr;
+		new_packet = new char[container.length];
+		memcpy(new_packet, container.data, container.length);
+		//container.data = new_packet;
+		//packets.push_back(container);
+
 		//
 		 // Check if we are really the destination of the IP datagram
 		 //
@@ -224,10 +232,11 @@ int count_source_id = 0;
 			destPort = ntohs(hdr->udp.dest);
 		}
 
+
 		//if (destPort != L0_Port) {
 		//cout<<"Destinazione: "<<destPort<<endl;
 		if (destPort != 58913) {
-			cout<<"Packets number:"<<npackets<<" Wrong destination port"<<endl;
+			cout<<"Packets number: "<<npackets<<" Wrong destination port"<<endl;
 			++wrongdestport;
 			continue;
 		}
@@ -324,7 +333,7 @@ int count_source_id = 0;
 
 					if (test->addL0Fragment(fragment, 1)) {
 						LOG_INFO("Complete! Serializing");
-						const EVENT_HDR* data = EventSerializer::SerializeEvent(test);
+						//const EVENT_HDR* data = EventSerializer::SerializeEvent(test);
 					}else{
 						//LOG_INFO("not Complete");
 					}
