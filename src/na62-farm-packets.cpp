@@ -74,6 +74,9 @@ bool checkFrame(UDP_HDR* hdr, uint_fast16_t length) {
 
 int main(int argc, char *argv[]) {
 
+EventSerializer::initialize();
+
+
 //get file
 char *filename = argv[1];
 
@@ -154,25 +157,43 @@ struct pcap_pkthdr *header;
  uint c_chod = 0;
  uint c_irc = 0;
 
-vector<DataContainer> packets;
-char * new_packet = nullptr;
+
+
 
 int count_source_id = 0;
- while (pcap_next_ex(handler, &header, &packet) >= 0){
+
+//Loading packets into memory
+vector<DataContainer> packets;
+int counter = 0;
+while (pcap_next_ex(handler, &header, &packet) >= 0){
+	//Storing reconstructed packets in the heap
+
+	DataContainer temp_container;
+	temp_container.data = new char[header->len];
+	temp_container.length = header->len;
+	temp_container.ownerMayFreeData = true;
+
+	memcpy(temp_container.data, packet, header->len);
+
+	packets.push_back(temp_container);
+	counter++;
+}
+
+LOG_INFO(counter);
+
+
+
+
+
+ for (auto packet : packets) {
+ //while (pcap_next_ex(handler, &header, &packet) >= 0){
 	++npackets;
 
-	//if(npackets >= 335 || npackets <= 330) continue;
 	try {
-		DataContainer container;
-
-		container.data = (char *) packet;
-		container.length = header->len;
-		container.ownerMayFreeData = true;
-
 	//////////////////
 	//Copied from HandleFrameTask
 	/////////////
-		UDP_HDR* hdr = (UDP_HDR*) container.data;
+		UDP_HDR* hdr = (UDP_HDR*) packet.data;
 		const uint_fast16_t etherType = (hdr->eth.ether_type);//ntohs
 		const uint_fast8_t ipProto = hdr->ip.protocol;
 		destPort = ntohs(hdr->udp.dest);
@@ -185,51 +206,44 @@ int count_source_id = 0;
 		}
 
 		//
-		 // Check checksum errors
-		 //
-		if (!checkFrame(hdr, container.length)) {
+		// Check checksum errors
+		if (!checkFrame(hdr, packet.length)) {
 			cout<<"Packets number:"<<npackets<<" Fail check frame"<<endl;
 			failcheckframe++;
 			//cout<< "Received broken packet from " << EthernetUtils::ipToString(hdr->ip.saddr) << endl;
 			continue;
 		}
 
-		//Storing reconstructed packets in the heap
-		new_packet = nullptr;
-		new_packet = new char[container.length];
-		memcpy(new_packet, container.data, container.length);
-		//container.data = new_packet;
-		//packets.push_back(container);
 
 		//
-		 // Check if we are really the destination of the IP datagram
-		 //
-		 //for 4102
+		// Check if we are really the destination of the IP datagram
+		//for 4102
 
 		 if (MyIP != dstIP){
 			cout<<"Packets number:"<<npackets<<" Wrong ip"<<endl;
 			wrongdestip++;
 			//cout<< "Received packet with wrong destination IP: " << EthernetUtils::ipToString(dstIP) << endl;
 			cout<< "Received packet with wrong destination IP: " <<dstIP << " ie "<< EthernetUtils::ipToString(dstIP)<< endl;
-
 			continue;
 		}
 
-		if (hdr->isFragment()){
+		if (hdr->isFragment()) {
+//			packet = FragmentStore::addFragment(std::move(packet));
+//			if (packet.data == nullptr) {
+//
+//				//cout<<"Packets number: "<<npackets<< "Skipping packets null ptr from pointer " << endl;
+//				continue;
+//			}
+//
+//			//cout<< "Packets reconstructed! " << endl;
+//			hdr = reinterpret_cast<UDP_HDR*>(packet.data);
+//			destPort = ntohs(hdr->udp.dest);
+//
+//			//TODO eluding fragmement store stuff
+//			continue;
 
-			//continue;
 			//cout<<"---"<<endl;
 			//cout<<"Packets number:"<<npackets<< " Is Fragment " << EthernetUtils::ipToString(hdr->ip.saddr) << endl;
-			container = FragmentStore::addFragment(std::move(container));
-			if (container.data == nullptr) {
-
-				//cout<<"Packets number: "<<npackets<< "Skipping packets null ptr from pointer " << endl;
-				continue;
-			}
-
-			//cout<< "Packets reconstructed! " << endl;
-			hdr = reinterpret_cast<UDP_HDR*>(container.data);
-			destPort = ntohs(hdr->udp.dest);
 		}
 
 
@@ -241,11 +255,11 @@ int count_source_id = 0;
 			continue;
 		}
 
-		hdr = reinterpret_cast<UDP_HDR*>(container.data);
-		const char * UDPPayload = container.data + sizeof(UDP_HDR);
+		hdr = reinterpret_cast<UDP_HDR*>(packet.data);
+		const char * UDPPayload = packet.data + sizeof(UDP_HDR);
 
 		const uint_fast16_t & UdpDataLength = ntohs(hdr->udp.len) - sizeof(udphdr);
-		l0::MEP* mep = new l0::MEP(UDPPayload, UdpDataLength, container);
+		l0::MEP* mep = new l0::MEP(UDPPayload, UdpDataLength, packet);
 		uint_fast16_t mepfactorTEMP = mep->getNumberOfFragments();
 		if (mepfactorMIN > mepfactorTEMP) {
 			mepfactorMIN = mepfactorTEMP;
@@ -290,10 +304,7 @@ int count_source_id = 0;
 
             	if (source == 0x4) {
             		//LOG_INFO("Match Cedar");
-
-
             		 c_cedar++;
-
             	} else if (source == 0x10) {
             		//LOG_INFO("Match lav");
             		 c_lav++;
@@ -329,11 +340,9 @@ int count_source_id = 0;
 								<<endl;
 				}
 
-
-
 					if (test->addL0Fragment(fragment, 1)) {
 						LOG_INFO("Complete! Serializing");
-						//const EVENT_HDR* data = EventSerializer::SerializeEvent(test);
+						const EVENT_HDR* data = EventSerializer::SerializeEvent(test);
 					}else{
 						//LOG_INFO("not Complete");
 					}
@@ -350,31 +359,37 @@ int count_source_id = 0;
  }
 
 
-	cout<<endl<<"###Filename: "<<filename<<endl;
-	cout<<"Global Statistics: "<<endl;
-	cout<<" Packets destination: "<<EthernetUtils::ipToString(MyIP)<<"IP: "<<MyIP<<endl;
-	cout<<" Number of packets: "<<npackets<<endl;
-	cout<<" Number of Arp: "<<arp<<endl;
-	cout<<" Number of fail check frame: "<< failcheckframe<<endl;
-	cout<<" Number of wrong destination ip: "<< wrongdestip<<endl;
-	cout<<" Number of wrong destination port: "<<  wrongdestport<<endl;
-	cout<<" Nfragment / Reassembled Frames / Unfinished Frames : "<<FragmentStore::getNumberOfReceivedFragments()<<"/"<<FragmentStore::getNumberOfReassembledFrames()<<"/"<<FragmentStore::getNumberOfUnfinishedFrames()<<endl;
-	cout<<" Range Event Number: ["<<eventnumberMIN<<" - "<<eventnumberMAX<<"]"<<endl;
-	cout<<" Range Mep Factor: ["<<mepfactorMIN<<" - "<<mepfactorMAX<<"]"<<endl;
+//	cout<<endl<<"###Filename: "<<filename<<endl;
+//	cout<<"Global Statistics: "<<endl;
+//	cout<<" Packets destination: "<<EthernetUtils::ipToString(MyIP)<<"IP: "<<MyIP<<endl;
+//	cout<<" Number of packets: "<<npackets<<endl;
+//	cout<<" Number of Arp: "<<arp<<endl;
+//	cout<<" Number of fail check frame: "<< failcheckframe<<endl;
+//	cout<<" Number of wrong destination ip: "<< wrongdestip<<endl;
+//	cout<<" Number of wrong destination port: "<<  wrongdestport<<endl;
+//	cout<<" Nfragment / Reassembled Frames / Unfinished Frames : "<<FragmentStore::getNumberOfReceivedFragments()<<"/"<<FragmentStore::getNumberOfReassembledFrames()<<"/"<<FragmentStore::getNumberOfUnfinishedFrames()<<endl;
+//	cout<<" Range Event Number: ["<<eventnumberMIN<<" - "<<eventnumberMAX<<"]"<<endl;
+//	cout<<" Range Mep Factor: ["<<mepfactorMIN<<" - "<<mepfactorMAX<<"]"<<endl;
+//
+//	LOG_INFO("Cedar fragments: " << c_cedar);
+//	LOG_INFO("Chanti fragments: " << c_chanti);
+//	LOG_INFO("Lav fragments: " << c_lav );
+//	LOG_INFO("Rich fragments: " << c_rich);
+//	LOG_INFO("Chod fragments: " << c_chod);
+//	LOG_INFO("Irc fragments: " << c_irc);
+//	LOG_INFO("Expected packets: " << SourceIDManager::NUMBER_OF_EXPECTED_L0_PACKETS_PER_EVENT);
 
-	LOG_INFO("Cedar fragments: " << c_cedar);
-	LOG_INFO("Chanti fragments: " << c_chanti);
-	LOG_INFO("Lav fragments: " << c_lav );
-	LOG_INFO("Rich fragments: " << c_rich);
-	LOG_INFO("Chod fragments: " << c_chod);
-	LOG_INFO("Irc fragments: " << c_irc);
-	LOG_INFO("Expected packets: " << SourceIDManager::NUMBER_OF_EXPECTED_L0_PACKETS_PER_EVENT);
-/*na62::EVENT_HDR* output = na62::EventSerializer::SerializeEvent(test);
-	//na62::EventSerializer::SerializeEvent(test);
-	char * serial;
-	serial = (char*) output;
-	for (int i =0; i < 8; ++i) {
-		cout << *(serial + i)<<endl;
-	}*/
-	return 0;
+//	for (auto packet : packets) {
+//		printf("%p ",packet.data);
+//		LOG_INFO("length: " << packet.length);
+//	}
+
+counter = 0;
+for ( auto &packet : packets ){
+	delete[] packet.data;
+	counter++;
+}
+packets.clear();
+//LOG_INFO(counter);
+
 }
