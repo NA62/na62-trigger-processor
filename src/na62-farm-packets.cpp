@@ -74,7 +74,6 @@ bool checkFrame(UDP_HDR* hdr, uint_fast16_t length) {
 
 int main(int argc, char *argv[]) {
 
-EventSerializer::initialize();
 
 
 //get file
@@ -113,6 +112,8 @@ struct pcap_pkthdr *header;
  SourceIDManager::Initialize(Options::GetInt(OPTION_TS_SOURCEID),
  			Options::GetIntPairList(OPTION_DATA_SOURCE_IDS),
  			Options::GetIntPairList(OPTION_L1_DATA_SOURCE_IDS));
+
+ EventSerializer::initialize();
 
  // OPTION_L1_DATA_SOURCE_IDS
 
@@ -180,10 +181,6 @@ while (pcap_next_ex(handler, &header, &packet) >= 0){
 }
 
 LOG_INFO(counter);
-
-
-
-
 
  for (auto packet : packets) {
  //while (pcap_next_ex(handler, &header, &packet) >= 0){
@@ -342,7 +339,15 @@ LOG_INFO(counter);
 
 					if (test->addL0Fragment(fragment, 1)) {
 						LOG_INFO("Complete! Serializing");
-						const EVENT_HDR* data = EventSerializer::SerializeEvent(test);
+						EVENT_HDR* serializedevent = EventSerializer::SerializeEvent(test);
+						std::cout << "!!!!!! after serialized" << std::endl;
+
+						/*int*  serializedevent_per_byte = (int * ) serializedevent;
+						for ( int a = 0; a < serializedevent->length; a++ ) {
+							std::cout << std::hex << (int) *(serializedevent_per_byte + a)<<std::endl;
+						}*/
+
+						na62::Event * event_from_serial = new Event(serializedevent, 1);
 					}else{
 						//LOG_INFO("not Complete");
 					}
