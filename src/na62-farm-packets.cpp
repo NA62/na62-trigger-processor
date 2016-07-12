@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
  EventSerializer::initialize();
  SmartEventSerializer::initialize();
 
- //SharedMemoryManager::initialize();
+ SharedMemoryManager::initialize();
 
  int eventnumberMIN = 2000000;
  int eventnumberMAX = 0;
@@ -231,7 +231,7 @@ PacketSeeker * packet_manager = new PacketSeeker(argv[1]);
 
             //if ( fragment->getEventNumber() ==  139899){
             if ( fragment->getEventNumber() ==  215283){
-            	LOG_INFO("Match Event");
+            	//LOG_INFO("Match Event");
 
             	if (source == 0x4) {
             		//LOG_INFO("Match Cedar");
@@ -274,26 +274,25 @@ PacketSeeker * packet_manager = new PacketSeeker(argv[1]);
 				if (test->addL0Fragment(fragment, 1)) {
 					LOG_INFO("Complete, sending  event to shared memory: for l1 processing");
 
-					//bool result = SharedMemoryManager::storeL1Event(test);
+					bool result = SharedMemoryManager::storeL1Event(test);
 
-					LOG_INFO("Complete! Serializing");
+					/*LOG_INFO("Complete! Serializing");
 					EVENT_HDR* serializedevent = EventSerializer::SerializeEvent(test);
-				/*	EVENT_HDR* smartserializedevent;
+					EVENT_HDR* smartserializedevent;
 					try {
 						smartserializedevent = SmartEventSerializer::SerializeEvent(test);
 					} catch(SerializeError) {
-						std::cout<<"Fragmet exceed the memory"<<std::endl;
+						std::cout<<"Fragment exceed the memory"<<std::endl;
 
-					}*/
+					}
 
-					/*SmartEventSerializer::compareSerializedEvent(serializedevent, smartserializedevent);
 					if (SmartEventSerializer::compareSerializedEvent(serializedevent, smartserializedevent)) {
 						std::cout<<" => Right serialization!"<<std::endl;
 					} else {
 						std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
 					}*/
 
-					std::cout << "Recreating event" << std::endl;
+					/*std::cout << "Recreating event" << std::endl;
 					na62::Event * event_from_serial = new Event(serializedevent, 1);
 
 					std::cout << "Reserializing event" << std::endl;
@@ -303,7 +302,7 @@ PacketSeeker * packet_manager = new PacketSeeker(argv[1]);
 						std::cout<<" => Right serialization!"<<std::endl;
 					} else {
 						std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
-					}
+					}*/
 				}else{
 					//LOG_INFO("not Complete");
 				}
