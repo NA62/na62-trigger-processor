@@ -4,24 +4,27 @@
 //============================================================================
 
 #include <iostream>
-#include <pcap/pcap.h>
+
 #include <socket/EthernetUtils.h>
 #include <l0/MEP.h>
 #include <l0/MEPFragment.h>
-//#include <LKr/LkrFragment.h>
-#include <eventBuilding/SourceIDManager.h>
 
 #include <exceptions/UnknownCREAMSourceIDFound.h>
 #include <exceptions/UnknownSourceIDFound.h>
 
 #include "options/MyOptions.h"
-#include "socket/FragmentStore.h"
+//#include "socket/FragmentStore.h"
 
-
-#include "eventBuilding/SourceIDManager.h"
-#include <eventBuilding/Event.h>
+//#include "eventBuilding/SourceIDManager.h"
+//#include <eventBuilding/Event.h>
 #include "storage/EventSerializer.h"
-#include "structs/Event.h"
+#include "storage/SmartEventSerializer.h"
+//#include "structs/Event.h"
+#include "eventBuilding/Event.h"
+
+#include "SharedMemory/SharedMemoryManager.h"
+#include "exceptions/SerializeError.h"
+#include "Utils/PacketSeeker.h"
 
 using namespace std;
 using namespace na62;
@@ -70,64 +73,23 @@ bool checkFrame(UDP_HDR* hdr, uint_fast16_t length) {
 	return true;
 }
 
-
-
 int main(int argc, char *argv[]) {
 
-
-
-//get file
-char *filename = argv[1];
-
-/*
-int length = sizeof(argv[1])/sizeof(char);
-//cout<<"Lenght:"<<length<<endl;
-char * Cfilename = new char[length];
-Cfilename = argv[1];
-*/
-
-
-//error buffer
-char errbuff[PCAP_ERRBUF_SIZE];
-
-//open file and create pcap handler
-pcap_t * handler = pcap_open_offline(filename, errbuff);
-
-//The header that pcap gives us
-struct pcap_pkthdr *header;
-
-//The actual packet
- const u_char *packet;
-
-
  MyOptions::Load(argc, argv);
-
- /*SourceIDManager::Initialize(Options::GetInt(OPTION_TS_SOURCEID),
- 			Options::GetIntPairList(OPTION_DATA_SOURCE_IDS),
- 			Options::GetIntPairList(OPTION_CREAM_CRATES),
- 			Options::GetIntPairList(OPTION_INACTIVE_CREAM_CRATES),
- 			Options::GetInt(OPTION_MUV_CREAM_CRATE_ID));*/
-
-
  SourceIDManager::Initialize(Options::GetInt(OPTION_TS_SOURCEID),
  			Options::GetIntPairList(OPTION_DATA_SOURCE_IDS),
  			Options::GetIntPairList(OPTION_L1_DATA_SOURCE_IDS));
 
  EventSerializer::initialize();
+ SmartEventSerializer::initialize();
 
- // OPTION_L1_DATA_SOURCE_IDS
-
-
-
-
+ //SharedMemoryManager::initialize();
 
  int eventnumberMIN = 2000000;
  int eventnumberMAX = 0;
 
  uint_fast16_t mepfactorMIN = 200;
  uint_fast16_t mepfactorMAX = 0;
-
-
 
  int npackets = 0;
 
@@ -148,8 +110,6 @@ struct pcap_pkthdr *header;
 
  na62::Event * test = new Event(1);
 
-
-
  //Detector counter
  uint c_lav = 0;
  uint c_cedar = 0;
@@ -158,34 +118,12 @@ struct pcap_pkthdr *header;
  uint c_chod = 0;
  uint c_irc = 0;
 
-
-
-
 int count_source_id = 0;
 
-//Loading packets into memory
-vector<DataContainer> packets;
-int counter = 0;
-while (pcap_next_ex(handler, &header, &packet) >= 0){
-	//Storing reconstructed packets in the heap
+PacketSeeker * packet_manager = new PacketSeeker(argv[1]);
 
-	DataContainer temp_container;
-	temp_container.data = new char[header->len];
-	temp_container.length = header->len;
-	temp_container.ownerMayFreeData = true;
-
-	memcpy(temp_container.data, packet, header->len);
-
-	packets.push_back(temp_container);
-	counter++;
-}
-
-LOG_INFO(counter);
-
- for (auto packet : packets) {
- //while (pcap_next_ex(handler, &header, &packet) >= 0){
+ for (auto packet : *packet_manager->getPackets()) {
 	++npackets;
-
 	try {
 	//////////////////
 	//Copied from HandleFrameTask
@@ -202,7 +140,6 @@ LOG_INFO(counter);
 			continue;
 		}
 
-		//
 		// Check checksum errors
 		if (!checkFrame(hdr, packet.length)) {
 			cout<<"Packets number:"<<npackets<<" Fail check frame"<<endl;
@@ -212,10 +149,8 @@ LOG_INFO(counter);
 		}
 
 
-		//
 		// Check if we are really the destination of the IP datagram
 		//for 4102
-
 		 if (MyIP != dstIP){
 			cout<<"Packets number:"<<npackets<<" Wrong ip"<<endl;
 			wrongdestip++;
@@ -242,7 +177,6 @@ LOG_INFO(counter);
 			//cout<<"---"<<endl;
 			//cout<<"Packets number:"<<npackets<< " Is Fragment " << EthernetUtils::ipToString(hdr->ip.saddr) << endl;
 		}
-
 
 		//if (destPort != L0_Port) {
 		//cout<<"Destinazione: "<<destPort<<endl;
@@ -337,21 +271,42 @@ LOG_INFO(counter);
 								<<endl;
 				}
 
-					if (test->addL0Fragment(fragment, 1)) {
-						LOG_INFO("Complete! Serializing");
-						EVENT_HDR* serializedevent = EventSerializer::SerializeEvent(test);
-						std::cout << "!!!!!! after serialized" << std::endl;
+				if (test->addL0Fragment(fragment, 1)) {
+					LOG_INFO("Complete, sending  event to shared memory: for l1 processing");
 
-						/*int*  serializedevent_per_byte = (int * ) serializedevent;
-						for ( int a = 0; a < serializedevent->length; a++ ) {
-							std::cout << std::hex << (int) *(serializedevent_per_byte + a)<<std::endl;
-						}*/
+					//bool result = SharedMemoryManager::storeL1Event(test);
 
-						na62::Event * event_from_serial = new Event(serializedevent, 1);
-					}else{
-						//LOG_INFO("not Complete");
+					LOG_INFO("Complete! Serializing");
+					EVENT_HDR* serializedevent = EventSerializer::SerializeEvent(test);
+				/*	EVENT_HDR* smartserializedevent;
+					try {
+						smartserializedevent = SmartEventSerializer::SerializeEvent(test);
+					} catch(SerializeError) {
+						std::cout<<"Fragmet exceed the memory"<<std::endl;
+
+					}*/
+
+					/*SmartEventSerializer::compareSerializedEvent(serializedevent, smartserializedevent);
+					if (SmartEventSerializer::compareSerializedEvent(serializedevent, smartserializedevent)) {
+						std::cout<<" => Right serialization!"<<std::endl;
+					} else {
+						std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
+					}*/
+
+					std::cout << "Recreating event" << std::endl;
+					na62::Event * event_from_serial = new Event(serializedevent, 1);
+
+					std::cout << "Reserializing event" << std::endl;
+					EVENT_HDR* smartreserializedevent = EventSerializer::SerializeEvent(event_from_serial);
+
+					if (SmartEventSerializer::compareSerializedEvent(serializedevent, smartreserializedevent)) {
+						std::cout<<" => Right serialization!"<<std::endl;
+					} else {
+						std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
 					}
-
+				}else{
+					//LOG_INFO("not Complete");
+				}
             }
 		}
 	} catch (UnknownSourceIDFound const& e) {
@@ -383,18 +338,4 @@ LOG_INFO(counter);
 //	LOG_INFO("Chod fragments: " << c_chod);
 //	LOG_INFO("Irc fragments: " << c_irc);
 //	LOG_INFO("Expected packets: " << SourceIDManager::NUMBER_OF_EXPECTED_L0_PACKETS_PER_EVENT);
-
-//	for (auto packet : packets) {
-//		printf("%p ",packet.data);
-//		LOG_INFO("length: " << packet.length);
-//	}
-
-counter = 0;
-for ( auto &packet : packets ){
-	delete[] packet.data;
-	counter++;
-}
-packets.clear();
-//LOG_INFO(counter);
-
 }
