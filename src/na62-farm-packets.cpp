@@ -85,31 +85,9 @@ int main(int argc, char *argv[]) {
 
  SharedMemoryManager::initialize();
 
+
  int eventnumberMIN = 2000000;
  int eventnumberMAX = 0;
-
- uint_fast16_t mepfactorMIN = 200;
- uint_fast16_t mepfactorMAX = 0;
-
- int npackets = 0;
-
- int arp = 0;
- int failcheckframe = 0;
- int wrongdestip = 0;
-
- int wrongdestport = 0;
-
- uint_fast16_t destPort = 0;
- //uint_fast32_t MyIP = 622117386;//10.194.20.37
-
- //for 4090
- uint_fast32_t MyIP = 638894602;
- //622117386
-
- cout<<"Packets destination: "<<EthernetUtils::ipToString(MyIP)<<endl;
-
- na62::Event * test = new Event(1);
-
  //Detector counter
  uint c_lav = 0;
  uint c_cedar = 0;
@@ -118,204 +96,124 @@ int main(int argc, char *argv[]) {
  uint c_chod = 0;
  uint c_irc = 0;
 
-int count_source_id = 0;
+ na62::Event * test = new Event(1);
 
 PacketSeeker * packet_manager = new PacketSeeker(argv[1]);
 
- for (auto packet : *packet_manager->getPackets()) {
-	++npackets;
-	try {
-	//////////////////
-	//Copied from HandleFrameTask
-	/////////////
-		UDP_HDR* hdr = (UDP_HDR*) packet.data;
-		const uint_fast16_t etherType = (hdr->eth.ether_type);//ntohs
-		const uint_fast8_t ipProto = hdr->ip.protocol;
-		destPort = ntohs(hdr->udp.dest);
-		const uint_fast32_t dstIP = hdr->ip.daddr;
+packet_manager->parse( [&](l0::MEP* & mep) -> void {
+	int count_source_id = 0;
+	for (uint i = 0; i != mep->getNumberOfFragments(); i++) {
 
-		if (etherType != 0x0008 || ipProto != IPPROTO_UDP) {//ETHERTYPE_IP
-			arp++;
-			//cout<< "Arp " << EthernetUtils::ipToString(hdr->ip.saddr) << endl;
-			continue;
+		l0::MEPFragment* fragment = mep->getFragment(i);
+		//cout<<fragment->getEventNumber()<<endl;
+		int eventnumberTEMP = fragment->getEventNumber();
+		if (eventnumberTEMP < eventnumberMIN){
+			eventnumberMIN = eventnumberTEMP;
 		}
-
-		// Check checksum errors
-		if (!checkFrame(hdr, packet.length)) {
-			cout<<"Packets number:"<<npackets<<" Fail check frame"<<endl;
-			failcheckframe++;
-			//cout<< "Received broken packet from " << EthernetUtils::ipToString(hdr->ip.saddr) << endl;
-			continue;
+		if (eventnumberTEMP > eventnumberMAX){
+				eventnumberMAX = eventnumberTEMP;
 		}
+		///Get the number of the detector
+		uint_fast8_t source = fragment->getSourceID();
+		uint_fast8_t sub = 3;
+		//LOG_INFO(fragment->getEventNumber());
+		//Good Event number
+		//215284
+		//215285
+		//215286
+		//215287
+		//215280
+		//215281
+		//215282
+		//215283
+		//215284
+		//215285
+		//215286
 
+		//if ( fragment->getEventNumber() ==  139899){
+		if ( fragment->getEventNumber() ==  215283){
+			//LOG_INFO("Match Event");
 
-		// Check if we are really the destination of the IP datagram
-		//for 4102
-		 if (MyIP != dstIP){
-			cout<<"Packets number:"<<npackets<<" Wrong ip"<<endl;
-			wrongdestip++;
-			//cout<< "Received packet with wrong destination IP: " << EthernetUtils::ipToString(dstIP) << endl;
-			cout<< "Received packet with wrong destination IP: " <<dstIP << " ie "<< EthernetUtils::ipToString(dstIP)<< endl;
-			continue;
-		}
+			if (source == 0x4) {
+				//LOG_INFO("Match Cedar");
+				 c_cedar++;
+			} else if (source == 0x10) {
+				//LOG_INFO("Match lav");
+				 c_lav++;
+			} else if (source == 0xc) {
+				//LOG_INFO("Match Chanti");
+				 c_chanti++;
+			} else if (source == 0x18) {
+				//LOG_INFO("Match Rich");
+				 c_rich++;
+			} else if (source == 0x1c) {
+			   // LOG_INFO("Match Chod");
+				c_chod++;
+			}else if (source  == 0x20) {
+				//LOG_INFO("Match IRC");
+				c_irc++;
 
-		if (hdr->isFragment()) {
-//			packet = FragmentStore::addFragment(std::move(packet));
-//			if (packet.data == nullptr) {
-//
-//				//cout<<"Packets number: "<<npackets<< "Skipping packets null ptr from pointer " << endl;
-//				continue;
-//			}
-//
-//			//cout<< "Packets reconstructed! " << endl;
-//			hdr = reinterpret_cast<UDP_HDR*>(packet.data);
-//			destPort = ntohs(hdr->udp.dest);
-//
-//			//TODO eluding fragmement store stuff
-//			continue;
+			}else if (source  == 0x28) {
+				//LOG_INFO("Match MUV1");
 
-			//cout<<"---"<<endl;
-			//cout<<"Packets number:"<<npackets<< " Is Fragment " << EthernetUtils::ipToString(hdr->ip.saddr) << endl;
-		}
+			}else if (source  == 0x30) {
+				//LOG_INFO("Match MUV3");
 
-		//if (destPort != L0_Port) {
-		//cout<<"Destinazione: "<<destPort<<endl;
-		if (destPort != 58913) {
-			cout<<"Packets number: "<<npackets<<" Wrong destination port"<<endl;
-			++wrongdestport;
-			continue;
-		}
+			}else if (source  == 0x40) {
+				//LOG_INFO("Match L0tp");
 
-		hdr = reinterpret_cast<UDP_HDR*>(packet.data);
-		const char * UDPPayload = packet.data + sizeof(UDP_HDR);
-
-		const uint_fast16_t & UdpDataLength = ntohs(hdr->udp.len) - sizeof(udphdr);
-		l0::MEP* mep = new l0::MEP(UDPPayload, UdpDataLength, packet);
-		uint_fast16_t mepfactorTEMP = mep->getNumberOfFragments();
-		if (mepfactorMIN > mepfactorTEMP) {
-			mepfactorMIN = mepfactorTEMP;
-		}
-		if (mepfactorMAX < mepfactorTEMP) {
-			mepfactorMAX = mepfactorTEMP;
-		}
-		if (mepfactorTEMP != 8) {
-			cout<<"Packets number:"<<npackets<<" Mep n "<<mepfactorTEMP<<endl;
-		}
-		for (uint i = 0; i != mep->getNumberOfFragments(); i++) {
-			l0::MEPFragment* fragment = mep->getFragment(i);
-			//cout<<fragment->getEventNumber()<<endl;
-			int eventnumberTEMP = fragment->getEventNumber();
-			if (eventnumberTEMP < eventnumberMIN){
-				eventnumberMIN = eventnumberTEMP;
+			}else{
+				LOG_INFO("Source ID: "<<fragment->getSourceID());
+				count_source_id++;
+					cout<<"Souce id: "<<((int)fragment->getSourceID())
+							<<" SubId: "<<((int)fragment->getSourceSubID())
+							<<" time: "<<count_source_id
+							<<" Event number: "<< fragment->getEventNumber()
+							<<endl;
 			}
-			if (eventnumberTEMP > eventnumberMAX){
-					eventnumberMAX = eventnumberTEMP;
+
+			if (test->addL0Fragment(fragment, 1)) {
+				LOG_INFO("Event Complete!");
+
+			}else{
+				//LOG_INFO("not Complete");
 			}
-			///Get the number of the detector
-            uint_fast8_t source = fragment->getSourceID();
-            uint_fast8_t sub = 3;
-            //LOG_INFO(fragment->getEventNumber());
-            //Good Event number
-            //
-            //215284
-            //215285
-            //215286
-            //215287
-            //215280
-            //215281
-            //215282
-            //215283
-            //215284
-            //215285
-            //215286
-
-            //if ( fragment->getEventNumber() ==  139899){
-            if ( fragment->getEventNumber() ==  215283){
-            	//LOG_INFO("Match Event");
-
-            	if (source == 0x4) {
-            		//LOG_INFO("Match Cedar");
-            		 c_cedar++;
-            	} else if (source == 0x10) {
-            		//LOG_INFO("Match lav");
-            		 c_lav++;
-            	} else if (source == 0xc) {
-            		//LOG_INFO("Match Chanti");
-            		 c_chanti++;
-            	} else if (source == 0x18) {
-            		//LOG_INFO("Match Rich");
-            		 c_rich++;
-            	} else if (source == 0x1c) {
-            	   // LOG_INFO("Match Chod");
-            	    c_chod++;
-            	}else if (source  == 0x20) {
-            		//LOG_INFO("Match IRC");
-            	    c_irc++;
-
-            	}else if (source  == 0x28) {
-	            	//LOG_INFO("Match MUV1");
-
-            	}else if (source  == 0x30) {
-	            	//LOG_INFO("Match MUV3");
-
-            	}else if (source  == 0x40) {
-	            	//LOG_INFO("Match L0tp");
-
-            	}else{
-					LOG_INFO("Source ID: "<<fragment->getSourceID());
-					count_source_id++;
-						cout<<"Souce id: "<<((int)fragment->getSourceID())
-								<<" SubId: "<<((int)fragment->getSourceSubID())
-								<<" time: "<<count_source_id
-								<<" Event number: "<< fragment->getEventNumber()
-								<<endl;
-				}
-
-				if (test->addL0Fragment(fragment, 1)) {
-					LOG_INFO("Complete, sending  event to shared memory: for l1 processing");
-
-					bool result = SharedMemoryManager::storeL1Event(test);
-
-					/*LOG_INFO("Complete! Serializing");
-					EVENT_HDR* serializedevent = EventSerializer::SerializeEvent(test);
-					EVENT_HDR* smartserializedevent;
-					try {
-						smartserializedevent = SmartEventSerializer::SerializeEvent(test);
-					} catch(SerializeError) {
-						std::cout<<"Fragment exceed the memory"<<std::endl;
-
-					}
-
-					if (SmartEventSerializer::compareSerializedEvent(serializedevent, smartserializedevent)) {
-						std::cout<<" => Right serialization!"<<std::endl;
-					} else {
-						std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
-					}*/
-
-					/*std::cout << "Recreating event" << std::endl;
-					na62::Event * event_from_serial = new Event(serializedevent, 1);
-
-					std::cout << "Reserializing event" << std::endl;
-					EVENT_HDR* smartreserializedevent = EventSerializer::SerializeEvent(event_from_serial);
-
-					if (SmartEventSerializer::compareSerializedEvent(serializedevent, smartreserializedevent)) {
-						std::cout<<" => Right serialization!"<<std::endl;
-					} else {
-						std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
-					}*/
-				}else{
-					//LOG_INFO("not Complete");
-				}
-            }
 		}
-	} catch (UnknownSourceIDFound const& e) {
-		//container.free();
-	} catch (UnknownCREAMSourceIDFound const&e) {
-		//container.free();
-	} catch (NA62Error const& e) {
-		//container.free();
 	}
- }
+});
+
+//				//bool result = SharedMemoryManager::storeL1Event(test);
+//
+//				LOG_INFO("Complete! Serializing");
+//				EVENT_HDR* serializedevent = EventSerializer::SerializeEvent(test);
+//				EVENT_HDR* smartserializedevent;
+//				try {
+//					smartserializedevent = SmartEventSerializer::SerializeEvent(test);
+//				} catch(SerializeError) {
+//					std::cout<<"Fragment exceed the memory"<<std::endl;
+//
+//				}
+//
+//				if (SmartEventSerializer::compareSerializedEvent(serializedevent, smartserializedevent)) {
+//					std::cout<<" => Right serialization!"<<std::endl;
+//				} else {
+//					std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
+//				}
+
+				/*std::cout << "Recreating event" << std::endl;
+				na62::Event * event_from_serial = new Event(serializedevent, 1);
+
+				std::cout << "Reserializing event" << std::endl;
+				EVENT_HDR* smartreserializedevent = EventSerializer::SerializeEvent(event_from_serial);
+
+				if (SmartEventSerializer::compareSerializedEvent(serializedevent, smartreserializedevent)) {
+					std::cout<<" => Right serialization!"<<std::endl;
+				} else {
+					std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
+				}*/
+
+
+
 
 
 //	cout<<endl<<"###Filename: "<<filename<<endl;

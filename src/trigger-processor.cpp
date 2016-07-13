@@ -1,42 +1,32 @@
-//============================================================================
-// Name        : simpleEclipseCPP11Project.cpp
-// Author      : Jonas Kunze (kunze.jonas@gmail.com)
-//============================================================================
-
-#include <iostream>
-
-#include <socket/EthernetUtils.h>
-#include <l0/MEP.h>
-#include <l0/MEPFragment.h>
-
-#include <exceptions/UnknownCREAMSourceIDFound.h>
-#include <exceptions/UnknownSourceIDFound.h>
-
 #include "options/MyOptions.h"
-//#include "socket/FragmentStore.h"
 
-//#include "eventBuilding/SourceIDManager.h"
-//#include <eventBuilding/Event.h>
-#include "storage/EventSerializer.h"
 #include "storage/SmartEventSerializer.h"
-//#include "structs/Event.h"
-#include "eventBuilding/Event.h"
+#include <common/HLTriggerManager.h>
+
 
 #include "SharedMemory/SharedMemoryManager.h"
-#include "exceptions/SerializeError.h"
-#include "Utils/PacketSeeker.h"
+
+#include <l1/L1TriggerProcessor.h>
 
 using namespace std;
 using namespace na62;
 
 int main(int argc, char *argv[]) {
 
+	TriggerOptions::Load(argc, argv);
 	MyOptions::Load(argc, argv);
+
+	HLTStruct HLTConfParams;
+	HLTriggerManager::fillStructFromXMLFile(HLTConfParams);
+	L1TriggerProcessor::initialize(HLTConfParams.l1);
+	//L2TriggerProcessor::initialize(HLTConfParams.l2);
+
+
+
 	SourceIDManager::Initialize(Options::GetInt(OPTION_TS_SOURCEID),
 			Options::GetIntPairList(OPTION_DATA_SOURCE_IDS),
 			Options::GetIntPairList(OPTION_L1_DATA_SOURCE_IDS));
 
-	EventSerializer::initialize();
 	SmartEventSerializer::initialize();
 
 
@@ -63,7 +53,14 @@ int main(int argc, char *argv[]) {
 
 				//LOG_INFO("Received event: " << trigger_message.event_id << "Trigger Result:  " << trigger_message.trigger_result);
 				LOG_INFO("Received event: " << fetched_event->getEventNumber());
-				EVENT_HDR* serializedevent = SmartEventSerializer::SerializeEvent(fetched_event);
+
+				/*
+				 * Process Level 1 trigger
+				 */
+				uint_fast8_t l1TriggerTypeWord = L1TriggerProcessor::compute(fetched_event);
+				LOG_INFO("Event Processed result: " << l1TriggerTypeWord);
+
+				//EVENT_HDR* serializedevent = SmartEventSerializer::SerializeEvent(fetched_event);
 				l1_num++;
 
 			}
