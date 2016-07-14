@@ -5,5 +5,5 @@ if [ $# == 0 ] ; then
 fi
 
 source common_params.sh
-./Debug/na62-farm-packets $1 $FARM_PARAMS
+./Debug/na62-farm-packets $1 $COMMON_PARAMS
 

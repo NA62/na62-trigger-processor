@@ -6,6 +6,7 @@
 #include <exceptions/UnknownCREAMSourceIDFound.h>
 #include <exceptions/UnknownSourceIDFound.h>
 
+#include "l1/L1TriggerProcessor.h"
 
 #include <l0/MEPFragment.h>
 
@@ -23,30 +24,116 @@ namespace na62 {
 		struct pcap_pkthdr *header;
 
 		//The actual packet
-		 const u_char *packet;
+		const u_char *packet;
 
 
-		 int counter = 0;
-		 while (pcap_next_ex(handler, &header, &packet) >= 0){
-		 	//Storing reconstructed packets in the heap
+		int counter = 0;
+		while (pcap_next_ex(handler, &header, &packet) >= 0){
+			//Storing reconstructed packets in the heap
 
-		 	DataContainer temp_container;
-		 	temp_container.data = new char[header->len];
-		 	temp_container.length = header->len;
-		 	temp_container.ownerMayFreeData = true;
+			DataContainer temp_container;
+			temp_container.data = new char[header->len];
+			temp_container.length = header->len;
+			temp_container.ownerMayFreeData = true;
 
-		 	::memcpy(temp_container.data, packet, header->len);
+			::memcpy(temp_container.data, packet, header->len);
 
-		 	packets_.push_back(temp_container);
-		 	counter++;
-		 }
+			packets_.push_back(temp_container);
+			counter++;
+		}
+		std::cout<<"Packets loaded: "<<counter<<std::endl;
 
+		int l1counter = 0;
+		std::vector<DataContainer> temp_packets;
+
+		//Create L1 Fake packets for each L0TP Packets
+		this->parse( [&](l0::MEP* & mep) -> void {
+			//std::cout<<"Parsing one packets "<<std::endl;
+			/*
+			 * Setup L1 block if L1 is active copying informations from L0TP MEps
+			 */
+			if (mep->getSourceID() == SOURCE_ID_L0TP) {
+				std::cout<<"Packets is a L0 packets"<<std::endl;
+
+				//if (SourceIDManager::isL1Active()) {
+					//LOG_INFO("Invent L1 MEP for event " << mep->getFirstEventNum());
+					uint16_t mep_factor = mep->getNumberOfFragments();
+					uint16_t fragmentLength = L1TriggerProcessor::GetL1DataPacketSize() + 8; //event length in bytes
+
+					const uint32_t L1BlockLength = mep_factor * fragmentLength
+							+ 8; //L1 block length in bytes
+					char * L1Data = new char[L1BlockLength + sizeof(UDP_HDR)]; //include UDP header
+
+					// set MEP header
+					l0::MEP_HDR * L1Hdr = (l0::MEP_HDR *) (L1Data + sizeof(UDP_HDR));
+					L1Hdr->firstEventNum = mep->getFirstEventNum();
+					L1Hdr->sourceID = SOURCE_ID_L1;
+					L1Hdr->mepLength = L1BlockLength;
+					L1Hdr->eventCount = mep_factor;
+					L1Hdr->sourceSubID = 0;
+
+
+					char * virtualFragment = + sizeof(UDP_HDR) + L1Data
+							+ 8 /* mep header */;
+					l0::MEPFragment * L1Fragment;
+					for (uint i = 0; i != mep_factor; i++) {
+						L1Fragment = mep->getFragment(i);
+						// copy the fragment header
+
+						memcpy(virtualFragment,
+								L1Fragment->getDataWithMepHeader(), 8);
+						uint16_t temp;
+						temp = *(uint16_t *) (virtualFragment) & 0xffff0000;
+						temp |= fragmentLength;
+						*(uint16_t *) (virtualFragment) = temp;
+						virtualFragment += fragmentLength;
+					}
+
+//					std::cout<<"No udp header"<<std::endl;
+//					int * Pointer1 = (int *) L1Data;
+//					int * Pointer2 = (int *) mep->getRawData().data;
+//					for ( uint a = 0; a <= ( L1BlockLength + sizeof(UDP_HDR))/4; a++  ){
+//						std::cout<<*(Pointer1)<<" "<<*(Pointer2)<<std::endl;
+//						Pointer1++;
+//						Pointer2++;
+//					}
+
+					//set udp header
+					//Works with this!!!
+					memcpy(L1Data, mep->getRawData().data, sizeof(UDP_HDR));
+					UDP_HDR*  updated_header = (UDP_HDR*) L1Data;
+					updated_header->setPayloadSize(L1BlockLength);
+
+					DataContainer temp_container;
+					temp_container.data = L1Data;
+					temp_container.length = L1BlockLength;
+					temp_container.ownerMayFreeData = true;
+
+					temp_packets.push_back(temp_container);
+					std::cout<<"L1 fake packets created"<<std::endl;
+					l1counter++;
+
+
+		//					l0::MEP* mep_L1 = new l0::MEP(L1Data + sizeof(UDP_HDR),	L1BlockLength, { L1Data, L1BlockLength, true });
+		//					uint sourceNum = SourceIDManager::sourceIDToNum(mep_L1->getSourceID());
+		//					MEPsReceivedBySourceNum_[sourceNum].fetch_add(1,std::memory_order_relaxed);
+		//					BytesReceivedBySourceNum_[sourceNum].fetch_add(	L1BlockLength + sizeof(UDP_HDR), std::memory_order_relaxed);
+		//					for (uint i = 0; i != mep_factor; i++) {
+		//						// Add every fragment
+		//						L1Builder::buildEvent(mep_L1->getFragment(i), burstID_);
+		//					}
+				//}
+			}
+		});
+
+		packets_.insert( packets_.end(), temp_packets.begin(), temp_packets.end() );
+		//packets_.swap(temp_packets);
+
+		std::cout<<"L1 Packets loaded: "<<l1counter<<" Array size: "<<packets_.size()<<std::endl;
 	}
-	void PacketSeeker::parse(std::function<void(l0::MEP*& mep)> my_function){
 
-//		 std::function<void()> f_display_42 = []() { print_num(42); };
-//		    f_display_42();
 
+	void PacketSeeker::parse(std::function< void (l0::MEP*& mep)> my_function){
 
 		 int npackets = 0;
 		 int arp = 0;
@@ -71,7 +158,8 @@ namespace na62 {
 
 				if (etherType != 0x0008 || ipProto != IPPROTO_UDP) {//ETHERTYPE_IP
 					arp++;
-					//cout<< "Arp " << EthernetUtils::ipToString(hdr->ip.saddr) << endl;
+
+					std::cout<< "Arp " << EthernetUtils::ipToString(hdr->ip.saddr) << std::endl;
 					continue;
 				}
 
@@ -90,7 +178,6 @@ namespace na62 {
 				 if (MyIP != dstIP){
 					std::cout<<"Packets number:"<<npackets<<" Wrong ip"<<std::endl;
 					wrongdestip++;
-					//cout<< "Received packet with wrong destination IP: " << EthernetUtils::ipToString(dstIP) << endl;
 					std::cout<< "Received packet with wrong destination IP: " <<dstIP << " ie "<< EthernetUtils::ipToString(dstIP)<< std::endl;
 					continue;
 				}
@@ -148,10 +235,13 @@ namespace na62 {
 //				}
 			} catch (UnknownSourceIDFound const& e) {
 				//container.free();
+				//std::cout<< "UnknownSourceIDFound: " << std::endl;
 			} catch (UnknownCREAMSourceIDFound const&e) {
 				//container.free();
+				std::cout<< "UnknownCREAMSourceIDFound: " << std::endl;
 			} catch (NA62Error const& e) {
 				//container.free();
+				std::cout<< "NA62Error: " << std::endl;
 			}
 		 }
 	}

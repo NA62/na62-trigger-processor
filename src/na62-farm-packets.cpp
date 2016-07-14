@@ -26,6 +26,9 @@
 #include "exceptions/SerializeError.h"
 #include "Utils/PacketSeeker.h"
 
+#include <l1/L1TriggerProcessor.h>
+#include <common/HLTriggerManager.h>
+
 using namespace std;
 using namespace na62;
 
@@ -75,112 +78,121 @@ bool checkFrame(UDP_HDR* hdr, uint_fast16_t length) {
 
 int main(int argc, char *argv[]) {
 
- MyOptions::Load(argc, argv);
- SourceIDManager::Initialize(Options::GetInt(OPTION_TS_SOURCEID),
- 			Options::GetIntPairList(OPTION_DATA_SOURCE_IDS),
- 			Options::GetIntPairList(OPTION_L1_DATA_SOURCE_IDS));
+	TriggerOptions::Load(argc, argv);
+	MyOptions::Load(argc, argv);
 
- EventSerializer::initialize();
- SmartEventSerializer::initialize();
-
- SharedMemoryManager::initialize();
+	HLTStruct HLTConfParams;
+	HLTriggerManager::fillStructFromXMLFile(HLTConfParams);
+	L1TriggerProcessor::initialize(HLTConfParams.l1);
+	//L2TriggerProcessor::initialize(HLTConfParams.l2);
 
 
- int eventnumberMIN = 2000000;
- int eventnumberMAX = 0;
- //Detector counter
- uint c_lav = 0;
- uint c_cedar = 0;
- uint c_chanti = 0;
- uint c_rich = 0;
- uint c_chod = 0;
- uint c_irc = 0;
+	SourceIDManager::Initialize(Options::GetInt(OPTION_TS_SOURCEID),
+			Options::GetIntPairList(OPTION_DATA_SOURCE_IDS),
+			Options::GetIntPairList(OPTION_L1_DATA_SOURCE_IDS));
 
- na62::Event * test = new Event(1);
+	EventSerializer::initialize();
+	SmartEventSerializer::initialize();
 
-PacketSeeker * packet_manager = new PacketSeeker(argv[1]);
+	SharedMemoryManager::initialize();
 
-packet_manager->parse( [&](l0::MEP* & mep) -> void {
-	int count_source_id = 0;
-	for (uint i = 0; i != mep->getNumberOfFragments(); i++) {
 
-		l0::MEPFragment* fragment = mep->getFragment(i);
-		//cout<<fragment->getEventNumber()<<endl;
-		int eventnumberTEMP = fragment->getEventNumber();
-		if (eventnumberTEMP < eventnumberMIN){
-			eventnumberMIN = eventnumberTEMP;
-		}
-		if (eventnumberTEMP > eventnumberMAX){
-				eventnumberMAX = eventnumberTEMP;
-		}
-		///Get the number of the detector
-		uint_fast8_t source = fragment->getSourceID();
-		uint_fast8_t sub = 3;
-		//LOG_INFO(fragment->getEventNumber());
-		//Good Event number
-		//215284
-		//215285
-		//215286
-		//215287
-		//215280
-		//215281
-		//215282
-		//215283
-		//215284
-		//215285
-		//215286
+	int eventnumberMIN = 2000000;
+	int eventnumberMAX = 0;
+	//Detector counter
+	uint c_lav = 0;
+	uint c_cedar = 0;
+	uint c_chanti = 0;
+	uint c_rich = 0;
+	uint c_chod = 0;
+	uint c_irc = 0;
 
-		//if ( fragment->getEventNumber() ==  139899){
-		if ( fragment->getEventNumber() ==  215283){
-			//LOG_INFO("Match Event");
+	na62::Event * test = new Event(1);
 
-			if (source == 0x4) {
-				//LOG_INFO("Match Cedar");
-				 c_cedar++;
-			} else if (source == 0x10) {
-				//LOG_INFO("Match lav");
-				 c_lav++;
-			} else if (source == 0xc) {
-				//LOG_INFO("Match Chanti");
-				 c_chanti++;
-			} else if (source == 0x18) {
-				//LOG_INFO("Match Rich");
-				 c_rich++;
-			} else if (source == 0x1c) {
-			   // LOG_INFO("Match Chod");
-				c_chod++;
-			}else if (source  == 0x20) {
-				//LOG_INFO("Match IRC");
-				c_irc++;
+	PacketSeeker * packet_manager = new PacketSeeker(argv[1]);
 
-			}else if (source  == 0x28) {
-				//LOG_INFO("Match MUV1");
+	packet_manager->parse( [&](l0::MEP* & mep) -> void {
+		int count_source_id = 0;
+		for (uint i = 0; i != mep->getNumberOfFragments(); i++) {
 
-			}else if (source  == 0x30) {
-				//LOG_INFO("Match MUV3");
-
-			}else if (source  == 0x40) {
-				//LOG_INFO("Match L0tp");
-
-			}else{
-				LOG_INFO("Source ID: "<<fragment->getSourceID());
-				count_source_id++;
-					cout<<"Souce id: "<<((int)fragment->getSourceID())
-							<<" SubId: "<<((int)fragment->getSourceSubID())
-							<<" time: "<<count_source_id
-							<<" Event number: "<< fragment->getEventNumber()
-							<<endl;
+			l0::MEPFragment* fragment = mep->getFragment(i);
+			//cout<<fragment->getEventNumber()<<endl;
+			int eventnumberTEMP = fragment->getEventNumber();
+			if (eventnumberTEMP < eventnumberMIN){
+				eventnumberMIN = eventnumberTEMP;
 			}
+			if (eventnumberTEMP > eventnumberMAX){
+					eventnumberMAX = eventnumberTEMP;
+			}
+			///Get the number of the detector
+			uint_fast8_t source = fragment->getSourceID();
+			uint_fast8_t sub = 3;
+			//LOG_INFO(fragment->getEventNumber());
+			//Good Event number
+			//215284
+			//215285
+			//215286
+			//215287
+			//215280
+			//215281
+			//215282
+			//215283
+			//215284
+			//215285
+			//215286
 
-			if (test->addL0Fragment(fragment, 1)) {
-				LOG_INFO("Event Complete!");
+			//if ( fragment->getEventNumber() ==  139899){
+			if ( fragment->getEventNumber() ==  215283){
+				//LOG_INFO("Match Event");
 
-			}else{
-				//LOG_INFO("not Complete");
+				if (source == 0x4) {
+					//LOG_INFO("Match Cedar");
+					 c_cedar++;
+				} else if (source == 0x10) {
+					//LOG_INFO("Match lav");
+					 c_lav++;
+				} else if (source == 0xc) {
+					//LOG_INFO("Match Chanti");
+					 c_chanti++;
+				} else if (source == 0x18) {
+					//LOG_INFO("Match Rich");
+					 c_rich++;
+				} else if (source == 0x1c) {
+				   // LOG_INFO("Match Chod");
+					c_chod++;
+				}else if (source  == 0x20) {
+					//LOG_INFO("Match IRC");
+					c_irc++;
+
+				}else if (source  == 0x28) {
+					//LOG_INFO("Match MUV1");
+
+				}else if (source  == 0x30) {
+					//LOG_INFO("Match MUV3");
+
+				}else if (source  == 0x40) {
+					//LOG_INFO("Match L0tp");
+				}else if (source  == 0x44) {
+							LOG_INFO("Match L1 PFake Packet!!");
+				}else{
+					LOG_INFO("Source ID: "<<fragment->getSourceID());
+					count_source_id++;
+						cout<<"Souce id: "<<((int)fragment->getSourceID())
+								<<" SubId: "<<((int)fragment->getSourceSubID())
+								<<" time: "<<count_source_id
+								<<" Event number: "<< fragment->getEventNumber()
+								<<endl;
+				}
+
+				if (test->addL0Fragment(fragment, 1)) {
+					LOG_INFO("Event Complete!");
+
+				}else{
+					//LOG_INFO("not Complete");
+				}
 			}
 		}
-	}
-});
+	});
 
 //				//bool result = SharedMemoryManager::storeL1Event(test);
 //

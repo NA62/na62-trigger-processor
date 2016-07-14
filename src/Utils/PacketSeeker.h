@@ -8,7 +8,7 @@ class PacketSeeker{
 	public:
 		PacketSeeker(char* filename);
 		virtual ~PacketSeeker();
-		void parse(std::function<void(l0::MEP*& mep)> my_function);
+		void parse(std::function< void (l0::MEP*& mep)> my_function);
 		inline std::vector<DataContainer> * getPackets() {
 			return  &packets_;
 		}

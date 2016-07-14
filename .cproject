@@ -32,6 +32,7 @@
 								<option id="gnu.cpp.compiler.option.other.other.1062449422" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" useByScannerDiscovery="false" value="-c -fmessage-length=0 -std=c++11" valueType="string"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1317492412" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/na62-farm-lib}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/na62-trigger-algorithms}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/na62-farm-lib-networking}&quot;"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.dialect.std.1913930107" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.cpp.compiler.dialect.default" valueType="enumerated"/>
@@ -42,16 +43,14 @@
 								<option id="gnu.c.compiler.exe.debug.option.debugging.level.1961632206" name="Debug Level" superClass="gnu.c.compiler.exe.debug.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.misc.other.1231501727" name="Other flags" superClass="gnu.c.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0" valueType="string"/>
 								<option id="gnu.c.compiler.option.dialect.std.590279081" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.c.compiler.dialect.default" valueType="enumerated"/>
-								<option id="gnu.c.compiler.option.include.paths.1233937375" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/na62-farm-lib-networking}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/na62-farm-lib}&quot;"/>
-								</option>
+								<option id="gnu.c.compiler.option.include.paths.1233937375" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.521031676" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.501737964" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug"/>
 							<tool command="g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.51847019" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug">
-								<option id="gnu.cpp.link.option.libs.426485393" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
+								<option id="gnu.cpp.link.option.libs.426485393" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" useByScannerDiscovery="false" valueType="libs">
 									<listOptionValue builtIn="false" value="pcap"/>
+									<listOptionValue builtIn="false" value="xmlpreprocessor"/>
 									<listOptionValue builtIn="false" value="boost_timer${tag}"/>
 									<listOptionValue builtIn="false" value="tbb"/>
 									<listOptionValue builtIn="false" value="boost_filesystem${tag}"/>
@@ -61,9 +60,12 @@
 									<listOptionValue builtIn="false" value="boost_system${tag}"/>
 									<listOptionValue builtIn="false" value="na62-farm-lib"/>
 									<listOptionValue builtIn="false" value="na62-farm-lib-networking"/>
+									<listOptionValue builtIn="false" value="na62-trigger-algorithms"/>
 								</option>
-								<option id="gnu.cpp.link.option.paths.1977129407" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
+								<option id="gnu.cpp.link.option.paths.1977129407" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" useByScannerDiscovery="false" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/mnt/sw/LCG/Boost/1.59.0_python2.7-cfca9/x86_64-slc6-gcc49-opt/lib/"/>
+									<listOptionValue builtIn="false" value="/workspace/XMLPreProcessor/XMLConf/"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/na62-trigger-algorithms/Debug}&quot;"/>
 									<listOptionValue builtIn="false" value="/mnt/sw/LCG/ers/x86_64-slc6-gcc49-opt/lib"/>
 									<listOptionValue builtIn="false" value="/mnt/sw/LCG/tbb/42_20140122-80d7a/x86_64-slc6-gcc49-opt/lib/"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/na62-farm-lib/Debug}&quot;"/>
