@@ -21,17 +21,15 @@ int main(int argc, char *argv[]) {
 	L1TriggerProcessor::initialize(HLTConfParams.l1);
 	//L2TriggerProcessor::initialize(HLTConfParams.l2);
 
-
-
 	SourceIDManager::Initialize(Options::GetInt(OPTION_TS_SOURCEID),
 			Options::GetIntPairList(OPTION_DATA_SOURCE_IDS),
 			Options::GetIntPairList(OPTION_L1_DATA_SOURCE_IDS));
 
-	SmartEventSerializer::initialize();
+	//SmartEventSerializer::initialize();
 
 
 
-	LOG_INFO("Initializing ");
+	LOG_INFO("Initializing Shared Memory");
 	SharedMemoryManager::initialize();
 	LOG_INFO("Initializing done!");
 	//Benchmarking Variables
@@ -45,7 +43,7 @@ int main(int argc, char *argv[]) {
 
 	while (1) {
 
-		if (na62::SharedMemoryManager::getNextEvent(fetched_event, trigger_message)) {
+		if (SharedMemoryManager::getNextEvent(fetched_event, trigger_message)) {
 
 			if(trigger_message.level == 1) {
 				//trigger_message.trigger_result  = computeL1Trigger(fetched_event);
@@ -57,15 +55,19 @@ int main(int argc, char *argv[]) {
 				/*
 				 * Process Level 1 trigger
 				 */
+				fetched_event->readTriggerTypeWordAndFineTime();
 				uint_fast8_t l1TriggerTypeWord = L1TriggerProcessor::compute(fetched_event);
-				LOG_INFO("Event Processed result: " << l1TriggerTypeWord);
 
+				std::cout<<"Event Processed result: " <<  l1TriggerTypeWord <<" end;"<<std::endl;
+				printf("l1 word %d \n",l1TriggerTypeWord);
+
+				trigger_message.l1_trigger_type_word = l1TriggerTypeWord;
 				//EVENT_HDR* serializedevent = SmartEventSerializer::SerializeEvent(fetched_event);
 				l1_num++;
 
 			}
 
-			na62::SharedMemoryManager::pushTriggerResponseQueue(trigger_message);
+			SharedMemoryManager::pushTriggerResponseQueue(trigger_message);
 
 			//Destroing the local copy of the object
 			//delete[] fetched_event.data;

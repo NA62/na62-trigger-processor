@@ -143,6 +143,8 @@ namespace na62 {
 
 		 //for 4090
 		 uint_fast32_t MyIP = 638894602;
+		 //for 5623
+		 //uint_fast32_t MyIP = 236241418;
 
 		 for (auto packet : packets_) {
 			++npackets;
@@ -158,8 +160,7 @@ namespace na62 {
 
 				if (etherType != 0x0008 || ipProto != IPPROTO_UDP) {//ETHERTYPE_IP
 					arp++;
-
-					std::cout<< "Arp " << EthernetUtils::ipToString(hdr->ip.saddr) << std::endl;
+					//std::cout<< "Arp " << EthernetUtils::ipToString(hdr->ip.saddr) << std::endl;
 					continue;
 				}
 
@@ -183,6 +184,7 @@ namespace na62 {
 				}
 
 				if (hdr->isFragment()) {
+
 //					packet = FragmentStore::addFragment(std::move(packet));
 //					if (packet.data == nullptr) {
 //
@@ -197,8 +199,8 @@ namespace na62 {
 //					//TODO eluding fragmement store stuff
 //					continue;
 
-					//cout<<"---"<<endl;
-					//cout<<"Packets number:"<<npackets<< " Is Fragment " << EthernetUtils::ipToString(hdr->ip.saddr) << endl;
+					std::cout<<"---"<<std::endl;
+					std::cout<<"Packets number:"<<npackets<< " Is Fragment " << EthernetUtils::ipToString(hdr->ip.saddr) << std::endl;
 				}
 
 				//if (destPort != L0_Port) {

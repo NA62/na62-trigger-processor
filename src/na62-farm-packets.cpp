@@ -29,6 +29,8 @@
 #include <l1/L1TriggerProcessor.h>
 #include <common/HLTriggerManager.h>
 
+#include "structs/L0TPHeader.h"
+
 using namespace std;
 using namespace na62;
 
@@ -129,51 +131,51 @@ int main(int argc, char *argv[]) {
 			uint_fast8_t sub = 3;
 			//LOG_INFO(fragment->getEventNumber());
 			//Good Event number
-			//215284
-			//215285
-			//215286
-			//215287
-			//215280
-			//215281
-			//215282
-			//215283
-			//215284
-			//215285
-			//215286
 
-			//if ( fragment->getEventNumber() ==  139899){
-			if ( fragment->getEventNumber() ==  215283){
-				//LOG_INFO("Match Event");
+
+			if ( fragment->getEventNumber() ==  139899){//recognise as control trigger
+			//if ( fragment->getEventNumber() ==  215283){//recognise as control trigger
+			//cout<<" "<<fragment->getEventNumber()<<endl;
+			//if ( fragment->getEventNumber() == 183520){
+				LOG_INFO("Match Event");
 
 				if (source == 0x4) {
-					//LOG_INFO("Match Cedar");
+					LOG_INFO("Match Cedar");
 					 c_cedar++;
 				} else if (source == 0x10) {
-					//LOG_INFO("Match lav");
+					LOG_INFO("Match lav");
 					 c_lav++;
 				} else if (source == 0xc) {
-					//LOG_INFO("Match Chanti");
+					LOG_INFO("Match Chanti");
 					 c_chanti++;
 				} else if (source == 0x18) {
-					//LOG_INFO("Match Rich");
+					LOG_INFO("Match Chod");
 					 c_rich++;
 				} else if (source == 0x1c) {
-				   // LOG_INFO("Match Chod");
+				    LOG_INFO("Match Rich");
 					c_chod++;
 				}else if (source  == 0x20) {
-					//LOG_INFO("Match IRC");
+					LOG_INFO("Match IRC");
 					c_irc++;
 
 				}else if (source  == 0x28) {
-					//LOG_INFO("Match MUV1");
+					LOG_INFO("Match MUV1");
 
 				}else if (source  == 0x30) {
-					//LOG_INFO("Match MUV3");
+					LOG_INFO("Match MUV3");
 
 				}else if (source  == 0x40) {
-					//LOG_INFO("Match L0tp");
+					LOG_INFO("Match L0tp");
+
 				}else if (source  == 0x44) {
-							LOG_INFO("Match L1 PFake Packet!!");
+					LOG_INFO("Match L1 PFake Packet!!");
+//							fragment
+//							int * pointer_fragment = (int *) fragment->getPayload();
+//							for (int a = 0; a <= fragment->_/4; a++) {
+//								std::cout<<*(pointer_fragment)<<std::endl;
+//								pointer_fragment++;
+//							}
+
 				}else{
 					LOG_INFO("Source ID: "<<fragment->getSourceID());
 					count_source_id++;
@@ -187,6 +189,50 @@ int main(int argc, char *argv[]) {
 				if (test->addL0Fragment(fragment, 1)) {
 					LOG_INFO("Event Complete!");
 
+					test->readTriggerTypeWordAndFineTime();
+					uint_fast16_t l0TrigFlags = test->getTriggerFlags();
+					printf("l0 trigger flags %d \n", l0TrigFlags);
+
+
+
+					bool result = SharedMemoryManager::storeL1Event(test);
+
+					/*
+					 * Process Level 1 trigger
+					 */
+					test->readTriggerTypeWordAndFineTime();
+					uint_fast8_t l1TriggerTypeWord = L1TriggerProcessor::compute(test);
+					printf("l1 word %d \n",l1TriggerTypeWord);
+
+//					LOG_INFO("Complete! Serializing");
+//					EVENT_HDR* serializedevent = EventSerializer::SerializeEvent(test);
+//					EVENT_HDR* smartserializedevent;
+//					try {
+//						smartserializedevent = SmartEventSerializer::SerializeEvent(test);
+//					} catch(SerializeError) {
+//						std::cout<<"Fragment exceed the memory"<<std::endl;
+//
+//					}
+//
+//					if (SmartEventSerializer::compareSerializedEvent(serializedevent, smartserializedevent)) {
+//						std::cout<<" => Right serialization!"<<std::endl;
+//					} else {
+//						std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
+//					}
+
+					/*std::cout << "Recreating event" << std::endl;
+					na62::Event * event_from_serial = new Event(serializedevent, 1);
+
+					std::cout << "Reserializing event" << std::endl;
+					EVENT_HDR* smartreserializedevent = EventSerializer::SerializeEvent(event_from_serial);
+
+					if (SmartEventSerializer::compareSerializedEvent(serializedevent, smartreserializedevent)) {
+						std::cout<<" => Right serialization!"<<std::endl;
+					} else {
+						std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
+					}*/
+
+
 				}else{
 					//LOG_INFO("not Complete");
 				}
@@ -194,35 +240,6 @@ int main(int argc, char *argv[]) {
 		}
 	});
 
-//				//bool result = SharedMemoryManager::storeL1Event(test);
-//
-//				LOG_INFO("Complete! Serializing");
-//				EVENT_HDR* serializedevent = EventSerializer::SerializeEvent(test);
-//				EVENT_HDR* smartserializedevent;
-//				try {
-//					smartserializedevent = SmartEventSerializer::SerializeEvent(test);
-//				} catch(SerializeError) {
-//					std::cout<<"Fragment exceed the memory"<<std::endl;
-//
-//				}
-//
-//				if (SmartEventSerializer::compareSerializedEvent(serializedevent, smartserializedevent)) {
-//					std::cout<<" => Right serialization!"<<std::endl;
-//				} else {
-//					std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
-//				}
-
-				/*std::cout << "Recreating event" << std::endl;
-				na62::Event * event_from_serial = new Event(serializedevent, 1);
-
-				std::cout << "Reserializing event" << std::endl;
-				EVENT_HDR* smartreserializedevent = EventSerializer::SerializeEvent(event_from_serial);
-
-				if (SmartEventSerializer::compareSerializedEvent(serializedevent, smartreserializedevent)) {
-					std::cout<<" => Right serialization!"<<std::endl;
-				} else {
-					std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!Wrong serialization!"<<std::endl;
-				}*/
 
 
 
