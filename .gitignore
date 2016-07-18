@@ -11,5 +11,10 @@
 *.lai
 *.la
 *.a
-#/Debug
+
+
+
+/Debug
 /Trigger-processor/
+/Receiver/
+/Clean/
