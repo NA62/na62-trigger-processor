@@ -41,8 +41,7 @@ int main(int argc, char *argv[]) {
 				fetched_event->readTriggerTypeWordAndFineTime();
 				uint_fast8_t l1TriggerTypeWord = L1TriggerProcessor::compute(fetched_event);
 
-				std::cout<<"Event Processed result: " <<  l1TriggerTypeWord <<" end;"<<std::endl;
-				printf("l1 word %d \n",l1TriggerTypeWord);
+				printf("Event Processed l1 word %d \n",l1TriggerTypeWord);
 
 				trigger_message.l1_trigger_type_word = l1TriggerTypeWord;
 				//EVENT_HDR* serializedevent = SmartEventSerializer::SerializeEvent(fetched_event);
