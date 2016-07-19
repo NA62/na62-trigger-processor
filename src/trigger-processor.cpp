@@ -64,7 +64,6 @@ int main(int argc, char *argv[]) {
 				trigger_message.l1_trigger_type_word = l1TriggerTypeWord;
 				//EVENT_HDR* serializedevent = SmartEventSerializer::SerializeEvent(fetched_event);
 				l1_num++;
-
 			}
 
 			SharedMemoryManager::pushTriggerResponseQueue(trigger_message);
