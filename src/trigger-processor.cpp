@@ -38,6 +38,8 @@ int main(int argc, char *argv[]) {
 	TriggerMessager trigger_message;
 	uint highest_burst_id_received = 0;
 
+	StrawAlgo strawalgo;
+
 	while (1) {
 		if (SharedMemoryManager::getNextEvent(fetched_event, trigger_message)) {
 			if (highest_burst_id_received < trigger_message.burst_id) {
@@ -58,7 +60,9 @@ int main(int argc, char *argv[]) {
 				 * Process Level 1 trigger
 				 */
 				fetched_event->readTriggerTypeWordAndFineTime();
-				uint_fast8_t l1TriggerTypeWord = L1TriggerProcessor::compute(fetched_event);
+
+
+				uint_fast8_t l1TriggerTypeWord = L1TriggerProcessor::compute(fetched_event, strawalgo);
 
 				//printf("Event Processed l1 word %d \n",l1TriggerTypeWord);
 
