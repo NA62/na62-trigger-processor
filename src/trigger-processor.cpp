@@ -61,12 +61,21 @@ int main(int argc, char *argv[]) {
 				 */
 				fetched_event->readTriggerTypeWordAndFineTime();
 
-
 				uint_fast8_t l1TriggerTypeWord = L1TriggerProcessor::compute(fetched_event, strawalgo);
+
+
+
 
 				//printf("Event Processed l1 word %d \n",l1TriggerTypeWord);
 
 				trigger_message.l1_trigger_type_word = l1TriggerTypeWord;
+
+				trigger_message.l1TriggerWords = L1TriggerProcessor::getL1TriggerWords();
+				trigger_message.l1Info = L1TriggerProcessor::getL1Info();
+				trigger_message.isL1WhileTimeout = L1TriggerProcessor::getIsL1WhileTimeout();
+
+				trigger_message.isRequestZeroSuppressed = fetched_event->isRrequestZeroSuppressedCreamData(); //Retrieving suppression
+
 				//EVENT_HDR* serializedevent = SmartEventSerializer::SerializeEvent(fetched_event);
 
 				SharedMemoryManager::pushTriggerResponseQueue(trigger_message);
@@ -109,9 +118,6 @@ int main(int argc, char *argv[]) {
 			//LOG_INFO("Nothing fetched trigger queue sleep for a while");
 			usleep(1);
 		}
-
-
-
 	}
 	return 0;
 }
