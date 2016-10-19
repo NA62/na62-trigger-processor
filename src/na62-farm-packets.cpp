@@ -200,8 +200,9 @@ int main(int argc, char *argv[]) {
 					/*
 					 * Process Level 1 trigger
 					 */
+					StrawAlgo strawalgo;
 					test->readTriggerTypeWordAndFineTime();
-					uint_fast8_t l1TriggerTypeWord = L1TriggerProcessor::compute(test);
+					uint_fast8_t l1TriggerTypeWord = L1TriggerProcessor::compute(test, strawalgo);
 					printf("l1 word %d \n",l1TriggerTypeWord);
 
 //					LOG_INFO("Complete! Serializing");
