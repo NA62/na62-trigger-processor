@@ -16,7 +16,6 @@
 /*
  * Listening Ports
  */
-#define OPTION_ETH_DEVICE_NAME (char*)"ethDeviceName"
 
 #define OPTION_L0_RECEIVER_PORT (char*)"L0Port"
 #define OPTION_CREAM_RECEIVER_PORT (char*)"CREAMPort"
@@ -97,12 +96,8 @@ public:
 		desc.add_options()
 
 		(OPTION_CONFIG_FILE,
-				po::value<std::string>()->default_value("/etc/na62-farm.cfg"),
+				po::value<std::string>()->default_value("/etc/na62-farm.conf"),
 				"Config file for the options shown here")
-
-		(OPTION_ETH_DEVICE_NAME,
-				po::value<std::string>()->default_value("dna0"),
-				"Name of the device to be used for receiving data")
 
 		(OPTION_L0_RECEIVER_PORT, po::value<int>()->default_value(58913),
 				"UDP-Port for L1 data reception")
