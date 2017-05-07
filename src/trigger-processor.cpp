@@ -70,7 +70,8 @@ int main(int argc, char *argv[]) {
 
 				trigger_message.l1_trigger_type_word = l1TriggerTypeWord;
 
-				trigger_message.l1TriggerWords = L1TriggerProcessor::getL1TriggerWords();
+				//trigger_message.l1TriggerWords = L1TriggerProcessor::getL1TriggerWords();
+				trigger_message.l1TriggerWords = fetched_event->getL1TriggerWords();
 				trigger_message.l1Info = L1TriggerProcessor::getL1Info();
 				trigger_message.isL1WhileTimeout = L1TriggerProcessor::getIsL1WhileTimeout();
 

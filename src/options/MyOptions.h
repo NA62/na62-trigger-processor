@@ -66,6 +66,9 @@
 */
 #define OPTION_MUV_CREAM_CRATE_ID (char*)"muvCreamCrateID"
 
+
+#define OPTION_CURRENT_RUN_NUMBER (char*)"currentRunNumber"
+
 /*
  *  STRAW
 
@@ -132,7 +135,8 @@ public:
 
 		(OPTION_TS_SOURCEID, po::value<std::string>()->default_value("0x40"),
 				"Source ID of the detector whose timestamp should be written into the final event and sent to the LKr for L1-triggers.")
-
+		(OPTION_CURRENT_RUN_NUMBER, po::value<int>()->default_value(1),
+						"The current RUN.")
 		(OPTION_FIRST_BURST_ID, po::value<int>()->required(),
 				"The current or first burst ID. This must be set if a PC starts during a run.")
 
