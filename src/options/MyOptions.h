@@ -37,6 +37,7 @@
 #define OPTION_CREAM_MULTICAST_GROUP (char*)"creamMulticastIP"
 #define OPTION_CREAM_MULTICAST_PORT (char*)"creamMulticastPort"
 #define OPTION_MAX_TRIGGERS_PER_L1MRP (char*)"maxTriggerPerL1MRP"
+#define OPTION_GATEWAY_MAC_ADDRESS (char *)"gatewayMAC"
 
 #define OPTION_SEND_MRP_WITH_ZSUPPRESSION_FLAG (char*)"sendMRPsWithZSuppressionFlag"
 
@@ -159,6 +160,10 @@ public:
 
 		(OPTION_MAX_TRIGGERS_PER_L1MRP, po::value<int>()->default_value(100),
 				"Maximum number of Triggers per L1 MRP")
+
+		(OPTION_GATEWAY_MAC_ADDRESS,
+				po::value<std::string>()->default_value("00:11:22:33:44:55"),
+				"MAC address of gateway")
 
 		(OPTION_SEND_MRP_WITH_ZSUPPRESSION_FLAG,
 				po::value<int>()->default_value(0),
